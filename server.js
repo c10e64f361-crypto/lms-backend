@@ -6,6 +6,7 @@ const courseRoutes = require('./routes/courseRoutes');
 const examRoutes = require('./routes/examRoutes');
 const chapterRoutes = require('./routes/chapterRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const discussionRoutes = require('./routes/discussionRoutes');
 const path = require('path');
 require('dotenv').config();
 
@@ -18,14 +19,18 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/certificates', certificateRoutes);
-// server.js
+const questionRoutes = require('./routes/questionRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
+app.use('/api/courses/:courseId/announcements', announcementRoutes);
 
-// server.js
-
+const learningRoutes = require('./routes/learningRoutes');
+app.use('/api/courses/:courseId/learning', learningRoutes);
+app.use('/api/courses/:courseId/questions', questionRoutes);
 app.use('/api/courses', chapterRoutes); // Nested route
 // server.js (thêm dòng)
 
 
+app.use('/api/courses/:courseId/discussions', discussionRoutes);
 app.use('/api/courses/:courseId/chapters', chapterRoutes);
 app.use('/api/auth', authRoutes); // ← THÊM DÒNG NÀY
 app.use('/api/courses', courseRoutes);
