@@ -9,6 +9,9 @@ const certificateRoutes = require('./routes/certificateRoutes');
 const discussionRoutes = require('./routes/discussionRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
+const questionBankRoutes = require('./routes/questionBankRoutes');
+// server.js
+const learningRoutes = require('./routes/learningRoutes');
 const path = require('path');
 require('dotenv').config();
 
@@ -20,14 +23,13 @@ app.use('/videos', express.static(path.join(__dirname, 'videos')));
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/exams', examRoutes);
-app.use('/api/certificates', certificateRoutes);
 // server.js
 const examQuestionRoutes = require('./routes/examQuestionRoutes');
 app.use('/api/exams/:examId/questions', examQuestionRoutes);
 // server.js
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
-const questionBankRoutes = require('./routes/questionBankRoutes');
+
 
 // server.js
 const examResultRoutes = require('./routes/examResultRoutes');
@@ -36,10 +38,22 @@ app.use('/api/question-bank', questionBankRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/courses/:courseId/announcements', announcementRoutes);
 
-const learningRoutes = require('./routes/learningRoutes');
 app.use('/api/courses/:courseId/learning', learningRoutes);
 app.use('/api/courses/:courseId/questions', questionRoutes);
 app.use('/api/courses', chapterRoutes); // Nested route
+// server.js
+const dashboardRoutes = require('./routes/dashboardRoutes');
+app.use('/api/dashboard', dashboardRoutes);
+// server.js
+const homeRoutes = require('./routes/homeRoutes');
+app.use('/api/home', homeRoutes);
+
+
+app.use('/api/certificate', certificateRoutes);
+const reportRoutes = require('./routes/reportRoutes');
+
+app.use('/api/reports', reportRoutes); // THÊM DÒNG NÀY
+app.use('/api/learning', learningRoutes); // ĐÚNG
 // server.js (thêm dòng)
 
 

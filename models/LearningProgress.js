@@ -71,7 +71,55 @@ getByUser: (userId, callback) => {
       if (err) return callback(err);
       callback(null, results);
     });
-  }
+  },
+  // models/LearningProgress.js
+// models/LearningProgress.js
+getCompletionStats: (filter = 'month', callback) => {
+  let sql = `
+    SELECT 
+      DATE_FORMAT(lp.updated_at, ?) as period,
+      COUNT(DISTINCT lp.user_id) as completed_users
+    FROM learning_progress lp
+    JOIN courses c ON lp.course_id = c.id
+    WHERE lp.total_score = lp.max_score  -- Hoàn thành 100%
+  `;
+
+  let format;
+  if (filter === 'week') format = '%Y-%u';
+  else if (filter === 'month') format = '%Y-%m';
+  else format = '%Y';
+
+  sql += ` GROUP BY period ORDER BY period DESC LIMIT 12`;
+
+  db.query(sql, [format], (err, results) => {
+    if (err) {
+      console.error('[LearningProgress.getCompletionStats] Lỗi:', err);
+      return callback(err);
+    }
+    callback(null, results.reverse()); // Đảo lại để mới nhất bên phải
+  });
+},
+// models/LearningProgress.js
+getAverageScoreStats: (filter = 'month', callback) => {
+  let sql = `
+    SELECT 
+      DATE_FORMAT(updated_at, ?) as period,
+      AVG(total_score / max_score * 100) as avg_score
+    FROM learning_progress
+  `;
+
+  let format;
+  if (filter === 'week') format = '%Y-%u';
+  else if (filter === 'month') format = '%Y-%m';
+  else format = '%Y';
+
+  sql += ` GROUP BY period ORDER BY period DESC LIMIT 12`;
+
+  db.query(sql, [format], (err, results) => {
+    if (err) return callback(err);
+    callback(null, results.reverse());
+  });
+},
 };
 
 module.exports = LearningProgress;

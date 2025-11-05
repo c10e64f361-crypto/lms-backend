@@ -28,7 +28,7 @@ exports.create = (req, res) => {
   const { code, title, description, instructor, duration, level, start_date, end_date, price, category_id, tag } = req.body;
   
   // Upload ảnh (Multer)
-  const thumbnail = req.file ? `/uploads/${req.file.filename}` : null;
+  const thumbnail = req.file ? `/uploads/images/${req.file.filename}` : null;
 
   const course = {
     code,
@@ -78,7 +78,7 @@ exports.update = (req, res) => {
   
   // Upload ảnh mới (nếu có)
   if (req.file) {
-    updates.thumbnail = `/uploads/${req.file.filename}`;
+    updates.thumbnail = `/uploads/images/${req.file.filename}`;
   }
 
   Course.update(id, updates, (err) => {
