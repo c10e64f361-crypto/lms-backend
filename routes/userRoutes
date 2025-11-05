@@ -2,26 +2,25 @@
 const express = require('express');
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
-const adminMiddleware = require('../middleware/adminMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware'); // ← ĐÃ SỬA TỪ LỖI TRƯỚC
 
 const router = express.Router();
 
-// GET /api/users - Danh sách (admin)
+// GET /api/users - Danh sách học viên (admin only)
 router.get('/', authMiddleware, adminMiddleware, userController.getAll);
 
-// GET /api/users/:id - Chi tiết (admin)
+// GET /api/users/:id - Chi tiết học viên (admin only)
 router.get('/:id', authMiddleware, adminMiddleware, userController.getById);
 
-// PUT /api/users/:id - Cập nhật (admin)
+// PUT /api/users/:id - Cập nhật học viên (admin only)
 router.put('/:id', authMiddleware, adminMiddleware, userController.update);
 
-// PUT /api/users/:id/role - CẤP QUYỀN (admin) ← THÊM DÒNG NÀY
-router.put('/:id/role', authMiddleware, adminMiddleware, userController.updateRole);
-
-// DELETE /api/users/:id - Xóa (admin)
+// DELETE /api/users/:id - Xóa học viên (admin only)
 router.delete('/:id', authMiddleware, adminMiddleware, userController.delete);
 
-// GET /api/users/me - Thông tin cá nhân (user)
+// GET /api/users/me - Thông tin user hiện tại (user only)
 router.get('/me', authMiddleware, userController.getMe);
+// routes/userRoutes.js
+router.put('/:id/role', authMiddleware, adminMiddleware, userController.updateRole);
 
 module.exports = router;

@@ -7,6 +7,8 @@ const examRoutes = require('./routes/examRoutes');
 const chapterRoutes = require('./routes/chapterRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const discussionRoutes = require('./routes/discussionRoutes');
+const questionRoutes = require('./routes/questionRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
 const path = require('path');
 require('dotenv').config();
 
@@ -19,8 +21,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/certificates', certificateRoutes);
-const questionRoutes = require('./routes/questionRoutes');
-const announcementRoutes = require('./routes/announcementRoutes');
+// server.js
+const examQuestionRoutes = require('./routes/examQuestionRoutes');
+app.use('/api/exams/:examId/questions', examQuestionRoutes);
+// server.js
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/users', userRoutes);
+const questionBankRoutes = require('./routes/questionBankRoutes');
+
+// server.js
+const examResultRoutes = require('./routes/examResultRoutes');
+app.use('/api/exams/:examId/results', examResultRoutes);
+app.use('/api/question-bank', questionBankRoutes);
+app.use('/api/exams', examRoutes);
 app.use('/api/courses/:courseId/announcements', announcementRoutes);
 
 const learningRoutes = require('./routes/learningRoutes');
