@@ -14,4 +14,6 @@ router.get('/chart/completion', authMiddleware, adminMiddleware, learningControl
 router.get('/certificates', authMiddleware, learningController.getCertificates);
 // Biểu đồ điểm trung bình
 router.get('/chart/avg-score', authMiddleware, adminMiddleware, learningController.getAverageScoreChart);
+// routes/learningRoutes.js
+router.get('/my-courses', authMiddleware, learningController.getMyCourses);
 module.exports = router;

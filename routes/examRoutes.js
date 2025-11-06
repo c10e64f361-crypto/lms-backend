@@ -5,10 +5,15 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// QUẢN LÝ KỲ THI (ADMIN)
+// KỲ THI CỦA HỌC VIÊN
+router.get('/myexams', authMiddleware, examController.getMyExams);
 router.get('/', authMiddleware, examController.getAll);
 router.post('/', authMiddleware, examController.create);
+router.get('/:id', authMiddleware, examController.getById);
 router.put('/:id', authMiddleware, examController.update);
 router.delete('/:id', authMiddleware, examController.delete);
-// routes/examRoutes.js
-router.get('/:id', authMiddleware, examController.getById); // ← THÊM DÒNG NÀY
+
+
+
 module.exports = router;

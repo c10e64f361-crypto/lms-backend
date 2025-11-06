@@ -123,6 +123,88 @@ exports.getAverageScoreChart = (req, res) => {
     res.json({ success: true, data });
   });
 };
+// controllers/learningController.js
+exports.getMyCourses = (req, res) => {
+  const userId = req.user.id;
+  const { page = 1, limit = 10, search = '', year = '', status = '' } = req.query;
+  const offset = (page - 1) * limit;
+
+  let sql = `
+    SELECT 
+      c.id as course_id, 
+      c.title as course_title, 
+      c.code as course_code,
+      c.start_date,
+      lp.status,
+      lp.chapters_completed,
+      lp.total_score,
+      lp.max_score
+    FROM courses c
+    JOIN learning_progress lp ON c.id = lp.course_id
+    WHERE lp.user_id = ?
+  `;
+  let countSql = `SELECT COUNT(*) as total FROM learning_progress lp JOIN courses c ON lp.course_id = c.id WHERE lp.user_id = ?`;
+  const params = [userId];
+  const countParams = [userId];
+
+  if (search) {
+    sql += ` AND c.title LIKE ?`;
+    countSql += ` AND c.title LIKE ?`;
+    const like = `%${search}%`;
+    params.push(like);
+    countParams.push(like);
+  }
+
+  if (year) {
+    sql += ` AND YEAR(c.start_date) = ?`;
+    countSql += ` AND YEAR(c.start_date) = ?`;
+    params.push(year);
+    countParams.push(year);
+  }
+
+  if (status) {
+    sql += ` AND lp.status = ?`;
+    countSql += ` AND lp.status = ?`;
+    params.push(status);
+    countParams.push(status);
+  }
+
+  // ĐẾM TỔNG
+  db.query(countSql, countParams, (err, countResult) => {
+    if (err) {
+      console.error('Lỗi đếm:', err);
+      return res.status(500).json({ success: false });
+    }
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    // LẤY DỮ LIỆU
+    sql += ` ORDER BY c.start_date DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    db.query(sql, params, (err, results) => {
+      if (err) {
+        console.error('Lỗi lấy khóa học:', err);
+        return res.status(500).json({ success: false });
+      }
+
+      const courses = results.map(c => ({
+        course_id: c.course_id,
+        course_title: c.course_title,
+        course_code: c.course_code,
+        start_date: c.start_date ? new Date(c.start_date).toLocaleDateString('vi-VN') : 'Chưa xác định',
+        status: c.status || 'Đang học',
+        completion_percent: c.max_score > 0 ? Math.round((c.total_score / c.max_score) * 100) : 0
+      }));
+
+      res.json({
+        success: true,
+        data: { courses, totalPages, currentPage: parseInt(page), total }
+      });
+    });
+  });
+};
 exports.getResults = (req, res) => {
   const { courseId } = req.params;
   const userId = req.user.id;

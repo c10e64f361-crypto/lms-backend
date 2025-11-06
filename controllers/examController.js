@@ -1,6 +1,6 @@
 // controllers/examController.js
 const Exam = require('../models/Exam');
-
+const db = require('../config/db');
 // controllers/examController.js
 exports.getAll = (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -59,6 +59,63 @@ exports.delete = (req, res) => {
   Exam.delete(id, (err) => {
     if (err) return res.status(500).json({ success: false });
     res.json({ success: true });
+  });
+};
+// controllers/examController.js
+// controllers/examController.js
+exports.getMyExams = (req, res) => {
+  const userId = req.user.id;
+  const { page = 1, limit = 20, search = '', year = '' } = req.query;
+  const offset = (page - 1) * limit;
+
+  let sql = `
+    SELECT 
+      e.id,
+      e.title AS wave_name,
+      e.title AS exam_name,
+      e.start_time,
+      e.end_time,
+      e.duration,
+      e.max_attempts AS attempts_allowed,
+      e.scoring_method,
+      er.score
+    FROM exam_results er
+    JOIN exams e ON er.exam_id = e.id
+    WHERE er.user_id = ? AND er.score IS NOT NULL
+  `;
+  let countSql = `SELECT COUNT(*) as total FROM exam_results er WHERE er.user_id = ? AND er.score IS NOT NULL`;
+  const params = [userId];
+  const countParams = [userId];
+
+  if (search) {
+    sql += ` AND e.title LIKE ?`;
+    const like = `%${search}%`;
+    params.push(like);
+  }
+
+  if (year) {
+    sql += ` AND YEAR(e.start_time) = ?`;
+    params.push(year);
+    countParams.push(year);
+  }
+
+  db.query(countSql, countParams, (err, countResult) => {
+    if (err) return res.status(500).json({ success: false });
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    sql += ` ORDER BY er.submitted_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    db.query(sql, params, (err, results) => {
+      if (err) return res.status(500).json({ success: false });
+
+      res.json({
+        success: true,
+        data: { exams: results, totalPages, currentPage: parseInt(page), total }
+      });
+    });
   });
 };
 // controllers/examController.js
