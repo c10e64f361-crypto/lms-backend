@@ -9,6 +9,27 @@ exports.getAll = (req, res) => {
   });
 };
 
+// THÊM HÀM NÀY ĐỂ FRONTEND GỌI
+exports.getQuestions = (req, res) => {
+  const { search = '', topic = '', difficulty = '' } = req.query;
+
+  const filters = {};
+  if (search) filters.search = search;
+  if (topic) filters.topic = topic;
+  if (difficulty && difficulty !== 'Tất cả') filters.difficulty = difficulty;
+
+  QuestionBank.getAll(filters, (err, result) => {
+    if (err) {
+      console.error('Lỗi lấy ngân hàng câu hỏi:', err);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+    res.json({ 
+      success: true, 
+      data: result.data // Trả về mảng câu hỏi
+    });
+  });
+};
+
 exports.create = (req, res) => {
   const data = req.body;
   QuestionBank.create(data, (err, result) => {
