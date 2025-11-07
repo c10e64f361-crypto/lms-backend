@@ -1,28 +1,57 @@
 // controllers/courseController.js
 const Course = require('../models/Course');
-
+const db = require('../config/db');
 // === TASK 4: DÙNG getAllWithFilters ===
+// controllers/courseController.js
+
+// controllers/courseController.js
 exports.getAll = (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const search = req.query.search || '';
-  const tag = req.query.tag || '';
+  const { page = 1, limit = 10, category_id, search } = req.query;
+  const offset = (page - 1) * limit;
 
-  Course.getAllWithFilters({ page, limit, search, tag }, (err, result) => {
-    if (err) {
-      
-      console.error('Lỗi lấy khóa học:', err);
-      return res.status(500).json({ success: false, message: 'Lỗi server' });
-    }
+  let sql = 'SELECT * FROM courses WHERE 1=1';
+  let countSql = 'SELECT COUNT(*) as total FROM courses WHERE 1=1';
+  const params = [];
+  const countParams = [];
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination
+  // LỌC THEO DANH MỤC
+  if (category_id) {
+    sql += ' AND category_id = ?';
+    countSql += ' AND category_id = ?';
+    params.push(category_id);
+    countParams.push(category_id);
+  }
+
+  // TÌM KIẾM THEO TITLE HOẶC CODE
+  if (search) {
+    const like = `%${search}%`;
+    sql += ' AND (title LIKE ? OR code LIKE ?)';
+    countSql += ' AND (title LIKE ? OR code LIKE ?)';
+    params.push(like, like);
+    countParams.push(like, like);
+  }
+
+  sql += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+  params.push(parseInt(limit), parseInt(offset));
+
+  db.query(countSql, countParams, (err, countResult) => {
+    if (err) return res.status(500).json({ success: false });
+    const total = countResult[0].total;
+
+    db.query(sql, params, (err, results) => {
+      if (err) return res.status(500).json({ success: false });
+      res.json({ 
+        success: true, 
+        data: results, 
+        total,
+        page: parseInt(page),
+        totalPages: Math.ceil(total / limit)
+      });
     });
   });
 };
 
+// ... các hàm create, update, delete của course
 
 exports.create = (req, res) => {
   const { code, title, description, instructor, duration, level, start_date, end_date, price, category_id, tag } = req.body;

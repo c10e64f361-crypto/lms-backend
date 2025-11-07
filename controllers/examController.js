@@ -47,10 +47,22 @@ exports.create = (req, res) => {
 
 exports.update = (req, res) => {
   const { id } = req.params;
-  const exam = req.body;
-  Exam.update(id, exam, (err) => {
-    if (err) return res.status(500).json({ success: false });
-    res.json({ success: true });
+  const { title, start_time, end_time, duration, max_attempts, scoring_method } = req.body;
+
+  const sql = `UPDATE exams SET 
+    title = ?, start_time = ?, end_time = ?, duration = ?, 
+    max_attempts = ?, scoring_method = ? 
+    WHERE id = ?`;
+
+  db.query(sql, [title, start_time, end_time, duration, max_attempts, scoring_method, id], (err, result) => {
+    if (err) {
+      console.error('Lỗi cập nhật kỳ thi:', err);
+      return res.status(500).json({ success: false });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Kỳ thi không tồn tại' });
+    }
+    res.json({ success: true, message: 'Cập nhật thành công' });
   });
 };
 
@@ -126,3 +138,34 @@ exports.getById = (req, res) => {
     res.json({ success: true, data: result });
   });
 };
+// controllers/examController.js
+
+// CHO HỌC VIÊN – ẨN ĐÁP ÁN
+exports.getQuestionsForUser = (req, res) => {
+  const { id } = req.params;
+  const sql = `
+    SELECT id, exam_id, question_text, 
+           option_a, option_b, option_c, option_d, 
+           points 
+    FROM exam_questions 
+    WHERE exam_id = ? 
+    ORDER BY id
+  `;
+
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false });
+    res.json({ success: true, data: results });
+  });
+};
+
+// CHO ADMIN – HIỂN THỊ ĐÁP ÁN
+exports.getQuestionsForAdmin = (req, res) => {
+  const { id } = req.params;
+  const sql = `SELECT * FROM exam_questions WHERE exam_id = ? ORDER BY id`;
+
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false });
+    res.json({ success: true, data: results });
+  });
+};
+

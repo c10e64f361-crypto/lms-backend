@@ -2,6 +2,7 @@
 const db = require('../config/db');
 
 const Exam = {
+
   getAllWithFilters: (filters, callback) => {
     const { page = 1, limit = 10, search = '', status = '' } = filters;
     const offset = (page - 1) * limit;

@@ -8,7 +8,7 @@ const uploadImage = require('../middleware/uploadImage');
 const adminMiddleware = require('../middleware/adminMiddleware');
 const router = express.Router();
 
-router.get('/', authMiddleware, courseController.getAll);
+router.get('/', courseController.getAll);
 router.post('/', authMiddleware, adminMiddleware, uploadImage, courseController.create);
 
 // routes/courseRoutes.js

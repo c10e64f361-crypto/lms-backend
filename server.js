@@ -32,12 +32,17 @@ const userRoutes = require('./routes/userRoutes');
 const examQuestionRoutes = require('./routes/examQuestionRoutes');
 const examResultRoutes = require('./routes/examResultRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+
+
+
+// ... middleware khác
 
 // === MOUNT ROUTES – `examRoutes` TRƯỚC CÁC ROUTE KHÁC ===
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/exams', examRoutes); // ← CHỈ MOUNT 1 LẦN, TRƯỚC CÁC ROUTE KHÁC
-
+app.use('/api/categories', categoryRoutes);
 app.use('/api/courses/:courseId/chapters', chapterRoutes);
 app.use('/api/courses/:courseId/announcements', announcementRoutes);
 app.use('/api/courses/:courseId/questions', questionRoutes);
@@ -57,7 +62,7 @@ app.use('/api/home', homeRoutes);
 app.use('/api/certificate', certificateRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/learning', learningRoutes); // ĐÚNG
-
+app.use('/api/categories', categoryRoutes);
 // === KHỞI ĐỘNG SERVER ===
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

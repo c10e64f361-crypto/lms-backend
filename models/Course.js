@@ -3,54 +3,61 @@ const db = require('../config/db');
 
 const Course = {
   // === TASK 4: Lấy danh sách có phân trang, tìm kiếm, lọc tag ===
-  getAllWithFilters: (filters, callback) => {
-    const { page = 1, limit = 10, search = '', tag = '' } = filters;
-    const offset = (page - 1) * limit;
+  // models/Course.js
+getAllWithFilters: (filters, callback) => {
+  const { page, limit, search, tag, category_id } = filters;
+  const offset = (page - 1) * limit;
 
-    let sql = `
-      SELECT 
-        c.*, 
-        cat.title AS category_title 
-      FROM courses c
-      LEFT JOIN categories cat ON c.category_id = cat.id
-      WHERE 1=1
-    `;
-    const params = [];
+  let sql = 'SELECT * FROM courses WHERE 1=1';
+  let countSql = 'SELECT COUNT(*) as total FROM courses WHERE 1=1';
+  const params = [];
+  const countParams = [];
 
-    if (search) {
-      sql += ` AND (c.title LIKE ? OR c.code LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
-    }
-    if (tag) {
-      sql += ` AND c.tag = ?`;
-      params.push(tag);
-    }
+  if (search) {
+    sql += ' AND (title LIKE ? OR description LIKE ?)';
+    countSql += ' AND (title LIKE ? OR description LIKE ?)';
+    const like = `%${search}%`;
+    params.push(like, like);
+    countParams.push(like, like);
+  }
 
-    // Đếm tổng
-    const countSql = `SELECT COUNT(*) as total FROM (${sql}) as sub`;
-    db.query(countSql, params, (err, countResult) => {
+  if (tag) {
+    sql += ' AND tag LIKE ?';
+    countSql += ' AND tag LIKE ?';
+    params.push(`%${tag}%`);
+    countParams.push(`%${tag}%`);
+  }
+
+  if (category_id) {
+    sql += ' AND category_id = ?';
+    countSql += ' AND category_id = ?';
+    params.push(category_id);
+    countParams.push(category_id);
+  }
+
+  sql += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  // LẤY TỔNG SỐ
+  db.query(countSql, countParams, (err, countResult) => {
+    if (err) return callback(err);
+    const total = countResult[0].total;
+
+    // LẤY DỮ LIỆU
+    db.query(sql, params, (err, results) => {
       if (err) return callback(err);
-      const total = countResult[0].total;
 
-      // Phân trang
-      sql += ` ORDER BY c.id ASC LIMIT ? OFFSET ?`;
-      params.push(parseInt(limit), parseInt(offset));
+      const totalPages = Math.ceil(total / limit);
 
-      db.query(sql, params, (err, results) => {
-        if (err) return callback(err);
-
-        callback(null, {
-          data: results,
-          pagination: {
-            total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalPages: Math.ceil(total / limit)
-          }
-        });
+      callback(null, {
+        data: results,
+        total,
+        page: parseInt(page),
+        totalPages
       });
     });
-  },
+  });
+},
 
   // === TASK 7: Lấy 1 khóa học theo ID (cho sửa) ===
   findById: (id, callback) => {
