@@ -16,11 +16,4 @@ router.delete('/:id', authMiddleware, examController.delete);
 
 
 
-// CHO HỌC VIÊN – ẨN ĐÁP ÁN
-router.get('/:id/questionsUser', authMiddleware, examController.getQuestionsForUser);
-
-// CHO ADMIN – HIỂN THỊ ĐÁP ÁN
-router.get('/:id/questions/admin', authMiddleware, adminMiddleware, examController.getQuestionsForAdmin);
-
-
 module.exports = router;

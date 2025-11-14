@@ -6,35 +6,59 @@ const QuestionBank = {
     const { page = 1, limit = 10, search = '', category = '', difficulty = '' } = filters;
     const offset = (page - 1) * limit;
 
-    let sql = 'SELECT * FROM question_bank WHERE 1=1';
-    const params = [];
+    // === XÂY DỰNG WHERE CHO CẢ HAI QUERY ===
+    let whereClause = '';
+    const whereParams = [];
 
     if (search) {
-      sql += ' AND question_text LIKE ?';
-      params.push(`%${search}%`);
+      whereClause += ' AND (question_text LIKE ? OR category LIKE ?)';
+      whereParams.push(`%${search}%`, `%${search}%`);
     }
-    if (category) {
-      sql += ' AND category = ?';
-      params.push(category);
+    if (category && category !== 'Tất cả') {
+      whereClause += ' AND category = ?';
+      whereParams.push(category);
     }
-    if (difficulty) {
-      sql += ' AND difficulty = ?';
-      params.push(difficulty);
+    if (difficulty && difficulty !== 'Tất cả') {
+      whereClause += ' AND difficulty = ?';
+      whereParams.push(difficulty);
     }
 
-    const countSql = `SELECT COUNT(*) as total FROM (${sql}) as sub`;
-    db.query(countSql, params, (err, countRes) => {
-      if (err) return callback(err);
-      const total = countRes[0].total;
+    // === 1. ĐẾM TỔNG (KHÔNG DÙNG SUBQUERY) ===
+    const countQuery = `SELECT COUNT(*) as total FROM question_bank WHERE 1=1 ${whereClause}`;
+    db.query(countQuery, whereParams, (err, countResult) => {
+      if (err) {
+        console.error('Lỗi đếm tổng:', err);
+        return callback(err);
+      }
 
-      sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-      params.push(parseInt(limit), parseInt(offset));
+      const total = countResult[0].total || 0;
 
-      db.query(sql, params, (err, results) => {
-        if (err) return callback(err);
+      // === 2. LẤY DỮ LIỆU ===
+      const dataQuery = `
+        SELECT * FROM question_bank 
+        WHERE 1=1 ${whereClause}
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+      `;
+
+      const dataParams = [...whereParams, parseInt(limit), parseInt(offset)];
+
+      db.query(dataQuery, dataParams, (err, results) => {
+        if (err) {
+          console.error('Lỗi lấy dữ liệu:', err);
+          return callback(err);
+        }
+
+        const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
+
         callback(null, {
           data: results,
-          pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / limit) }
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages
+          }
         });
       });
     });
