@@ -16,4 +16,8 @@ router.put('/:id', authMiddleware, adminMiddleware, uploadImage, courseControlle
 router.delete('/:id', authMiddleware, adminMiddleware, courseController.delete);
 // routes/courseRoutes.js
 router.get('/:id', authMiddleware, courseController.getOne);
+// routes/courseRoutes.js
+router.get('/:id/learning/results', authMiddleware, courseController.getLearningResults);
+// routes/courseRoutes.js
+router.post('/:id/enroll', authMiddleware, courseController.enrollCourse);
 module.exports = router;

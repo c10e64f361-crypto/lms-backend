@@ -131,3 +131,114 @@ exports.delete = (req, res) => {
     res.json({ success: true, message: 'Xóa thành công' });
   });
 };
+
+
+
+// controllers/courseController.js
+exports.getLearningResults = (req, res) => {
+  const courseId = req.params.id;
+  const userId = req.user.id;
+
+  db.query(
+    `SELECT COUNT(*) as total FROM chapters WHERE course_id = ?`,
+    [courseId],
+    (err, chapterResult) => {
+      if (err) return res.status(500).json({ success: false });
+
+      const total_chapters = chapterResult[0]?.total || 0;
+
+      db.query(
+        `SELECT chapters_completed FROM learning_progress WHERE user_id = ? AND course_id = ?`,
+        [userId, courseId],
+        (err, progressResult) => {
+          if (err) return res.status(500).json({ success: false });
+
+          let completed_chapters = 0;
+          if (progressResult[0]?.chapters_completed) {
+            try {
+              // LOẠI BỎ KHOẢNG TRẮNG + DẤU NGOẶC VUÔNG
+              const raw = progressResult[0].chapters_completed.toString().trim();
+              if (raw && raw !== '[]') {
+                const cleaned = raw.replace(/\[|\]/g, '').trim();
+                if (cleaned) {
+                  completed_chapters = cleaned.split(',').map(id => id.trim()).filter(Boolean).length;
+                }
+              }
+            } catch (e) {
+              console.error('Lỗi parse chapters_completed:', e);
+            }
+          }
+
+          const completion_percent = total_chapters > 0
+            ? Math.round((completed_chapters / total_chapters) * 100)
+            : 0;
+
+          let badge = null;
+          if (completion_percent === 100) badge = 'Hoàn thành khóa học';
+          else if (completion_percent >= 80) badge = 'Học viên xuất sắc';
+          else if (completion_percent >= 50) badge = 'Học viên chăm chỉ';
+
+          res.json({
+            success: true,
+            data: {
+              completed_chapters,
+              total_chapters,
+              completion_percent,
+              badge
+            }
+          });
+        }
+      );
+    }
+  );
+};
+
+
+// API: Bấm "Vào học" → tăng 1 học viên (chỉ tăng 1 lần duy nhất)
+exports.enrollCourse = (req, res) => {
+  const userId = req.user.id;
+  const courseId = req.params.id;
+
+  // B1: Kiểm tra đã từng bấm vào học chưa
+  db.query(
+    'SELECT 1 FROM course_views WHERE user_id = ? AND course_id = ? LIMIT 1',
+    [userId, courseId],
+    (err, results) => {
+      if (err) {
+        console.error('Lỗi kiểm tra course_views:', err);
+        return res.status(500).json({ success: false });
+      }
+
+      // Nếu đã từng bấm → không tăng nữa
+      if (results.length > 0) {
+        return res.json({ success: true, message: 'Đã ghi nhận trước đó' });
+      }
+
+      // B2: Ghi nhận lần đầu bấm vào học
+      db.query(
+        'INSERT INTO course_views (user_id, course_id, viewed_at) VALUES (?, ?, NOW())',
+        [userId, courseId],
+        (err) => {
+          if (err) {
+            console.error('Lỗi insert course_views:', err);
+            return res.status(500).json({ success: false });
+          }
+
+          // B3: Tăng số học viên trong bảng courses
+          db.query(
+            'UPDATE courses SET students = students + 1 WHERE id = ?',
+            [courseId],
+            (err) => {
+              if (err) {
+                console.error('Lỗi tăng students:', err);
+                return res.status(500).json({ success: false });
+              }
+
+              res.json({ success: true, message: 'Đã tham gia khóa học' });
+            }
+          );
+        }
+      );
+    }
+  );
+};

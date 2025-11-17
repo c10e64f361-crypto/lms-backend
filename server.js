@@ -49,8 +49,11 @@ app.use('/api/courses/:courseId/announcements', announcementRoutes);
 app.use('/api/courses/:courseId/questions', questionRoutes);
 app.use('/api/courses/:courseId/discussions', discussionRoutes);
 app.use('/api/courses/:courseId/learning', learningRoutes);
+// server.js
+app.use('/api/learning', require('./routes/learningRoutes'));
 app.use('/api/courses/:courseId/documents', documentRoutes);
-
+// server.js
+app.use('/api/user/progress', require('./routes/userProgressRoutes'));
 app.use('/api/users', userRoutes);
 app.use('/api/question-bank', questionBankRoutes);
 app.use('/api/dashboard', dashboardRoutes);

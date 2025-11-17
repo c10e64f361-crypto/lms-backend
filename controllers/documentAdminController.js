@@ -4,25 +4,71 @@ const fs = require('fs');
 const path = require('path');
 const BASE_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
-// LẤY TẤT CẢ TÀI LIỆU
+// controllers/documentController.js
+
+
 exports.getAll = (req, res) => {
-  const sql = `
+  const { page = 1, limit = 10, search = '' } = req.query;
+  const offset = (page - 1) * limit;
+
+  let where = '';
+  let params = [];
+
+  if (search) {
+    where = `WHERE d.title LIKE ? OR u.fullName LIKE ?`;
+    const like = `%${search}%`;
+    params.push(like, like);
+  }
+
+  const countQuery = `
+    SELECT COUNT(*) as total 
+    FROM documents d
+    JOIN users u ON d.uploaded_by = u.id
+    ${where}
+  `;
+
+  const dataQuery = `
     SELECT d.*, u.fullName as uploaded_by_name
     FROM documents d
     JOIN users u ON d.uploaded_by = u.id
+    ${where}
     ORDER BY d.uploaded_at DESC
+    LIMIT ? OFFSET ?
   `;
 
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ success: false });
-    const docs = results.map(d => ({
-      ...d,
-      file_url: `${BASE_URL}${d.file_url}`
-    }));
-    res.json({ success: true, data: docs });
+  db.query(countQuery, params, (err, countResult) => {
+    if (err) {
+      console.error('Lỗi đếm tài liệu:', err);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    db.query(dataQuery, [...params, parseInt(limit), offset], (err, results) => {
+      if (err) {
+        console.error('Lỗi lấy tài liệu:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+      }
+
+      const docs = results.map(d => ({
+        ...d,
+        file_url: `${BASE_URL}${d.file_url}`
+      }));
+
+      res.json({
+        success: true,
+        data: docs,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          totalPages
+        }
+      });
+    });
   });
 };
-
 // TẠO MỚI
 exports.create = (req, res) => {
   const { title } = req.body;

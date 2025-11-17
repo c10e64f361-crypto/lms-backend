@@ -123,38 +123,48 @@ exports.getAverageScoreChart = (req, res) => {
     res.json({ success: true, data });
   });
 };
-// controllers/learningController.js
+
+
 exports.getMyCourses = (req, res) => {
   const userId = req.user.id;
   const { page = 1, limit = 10, search = '', year = '', status = '' } = req.query;
   const offset = (page - 1) * limit;
 
+  // Query chính
   let sql = `
     SELECT 
       c.id as course_id, 
       c.title as course_title, 
       c.code as course_code,
       c.start_date,
-      lp.status,
       lp.chapters_completed,
-      lp.total_score,
-      lp.max_score
+      (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.id) as total_chapters
     FROM courses c
     JOIN learning_progress lp ON c.id = lp.course_id
     WHERE lp.user_id = ?
   `;
-  let countSql = `SELECT COUNT(*) as total FROM learning_progress lp JOIN courses c ON lp.course_id = c.id WHERE lp.user_id = ?`;
+
+  // Query đếm tổng
+  let countSql = `
+    SELECT COUNT(*) as total 
+    FROM courses c
+    JOIN learning_progress lp ON c.id = lp.course_id
+    WHERE lp.user_id = ?
+  `;
+
   const params = [userId];
   const countParams = [userId];
 
+  // Tìm kiếm
   if (search) {
-    sql += ` AND c.title LIKE ?`;
-    countSql += ` AND c.title LIKE ?`;
+    sql += ` AND (c.title LIKE ? OR c.code LIKE ?)`;
+    countSql += ` AND (c.title LIKE ? OR c.code LIKE ?)`;
     const like = `%${search}%`;
-    params.push(like);
-    countParams.push(like);
+    params.push(like, like);
+    countParams.push(like, like);
   }
 
+  // Năm
   if (year) {
     sql += ` AND YEAR(c.start_date) = ?`;
     countSql += ` AND YEAR(c.start_date) = ?`;
@@ -162,22 +172,26 @@ exports.getMyCourses = (req, res) => {
     countParams.push(year);
   }
 
+  // Trạng thái: Đang học / Hoàn thành
   if (status) {
-    sql += ` AND lp.status = ?`;
-    countSql += ` AND lp.status = ?`;
-    params.push(status);
-    countParams.push(status);
+    if (status === 'Đang học') {
+      sql += ` AND JSON_LENGTH(lp.chapters_completed) < (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.id)`;
+      countSql += ` AND JSON_LENGTH(lp.chapters_completed) < (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.id)`;
+    } else if (status === 'Hoàn thành') {
+      sql += ` AND JSON_LENGTH(lp.chapters_completed) = (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.id)`;
+      countSql += ` AND JSON_LENGTH(lp.chapters_completed) = (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.id)`;
+    }
   }
 
   // ĐẾM TỔNG
   db.query(countSql, countParams, (err, countResult) => {
     if (err) {
-      console.error('Lỗi đếm:', err);
+      console.error('Lỗi đếm khóa học:', err);
       return res.status(500).json({ success: false });
     }
 
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
+    const total = countResult[0]?.total || 0;
+    const totalPages = Math.ceil(total / limit) || 1;
 
     // LẤY DỮ LIỆU
     sql += ` ORDER BY c.start_date DESC LIMIT ? OFFSET ?`;
@@ -185,22 +199,54 @@ exports.getMyCourses = (req, res) => {
 
     db.query(sql, params, (err, results) => {
       if (err) {
-        console.error('Lỗi lấy khóa học:', err);
+        console.error('Lỗi lấy danh sách khóa học:', err);
         return res.status(500).json({ success: false });
       }
 
-      const courses = results.map(c => ({
-        course_id: c.course_id,
-        course_title: c.course_title,
-        course_code: c.course_code,
-        start_date: c.start_date ? new Date(c.start_date).toLocaleDateString('vi-VN') : 'Chưa xác định',
-        status: c.status || 'Đang học',
-        completion_percent: c.max_score > 0 ? Math.round((c.total_score / c.max_score) * 100) : 0
-      }));
+// === THAY TOÀN BỘ ĐOẠN MAP NÀY ===
+const courses = results.map(c => {
+  let completed = 0;
+  let total = c.total_chapters || 0;
 
+  // LOG ĐỂ XEM DỮ LIỆU
+  console.log('Raw chapters_completed:', c.chapters_completed, '| Type:', typeof c.chapters_completed);
+
+  if (c.chapters_completed) {
+    if (Array.isArray(c.chapters_completed)) {
+      // ĐÃ LÀ ARRAY → DÙNG TRỰC TIẾP
+      completed = c.chapters_completed.length;
+    } else if (typeof c.chapters_completed === 'string') {
+      // LÀ CHUỖI → MỚI CẦN JSON.parse
+      try {
+        const parsed = JSON.parse(c.chapters_completed);
+        completed = Array.isArray(parsed) ? parsed.length : 0;
+      } catch (e) {
+        console.error('Lỗi parse string:', e);
+      }
+    }
+  }
+
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  return {
+    course_id: c.course_id,
+    course_title: c.course_title,
+    course_code: c.course_code || 'Chưa có mã',
+    start_date: c.start_date ? new Date(c.start_date).toLocaleDateString('vi-VN') : 'Chưa xác định',
+    status: percent === 100 ? 'Hoàn thành' : 'Đang học',
+    completion_percent: percent,
+    completed_chapters: completed,
+    total_chapters: total
+  };
+});
       res.json({
         success: true,
-        data: { courses, totalPages, currentPage: parseInt(page), total }
+        data: {
+          courses,
+          totalPages,
+          currentPage: parseInt(page),
+          total
+        }
       });
     });
   });

@@ -82,3 +82,64 @@ exports.getRecent = (req, res) => {
     res.json({ success: true, data: recent });
   });
 };
+
+
+exports.getTrending = (req, res) => {
+  const sql = `
+    SELECT 
+      id, 
+      title, 
+      thumbnail, 
+      code,
+      students
+    FROM courses 
+    WHERE students > 0
+    ORDER BY students DESC
+    LIMIT 8
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Lỗi lấy trending:', err);
+      return res.status(500).json({ success: false });
+    }
+
+    // Chỉ trả về đúng dữ liệu bạn cần, không thêm cột ảo
+    res.json({ 
+      success: true, 
+      data: results  // students đã có sẵn trong kết quả
+    });
+  });
+};
+
+
+// controllers/homeController.js
+exports.getTopStudents = (req, res) => {
+  const sql = `
+    SELECT 
+      u.id, 
+      u.fullName,
+      COUNT(lp.course_id) as completed_courses
+    FROM users u
+    JOIN learning_progress lp ON u.id = lp.user_id
+    WHERE lp.total_score = lp.max_score
+    GROUP BY u.id
+    ORDER BY completed_courses DESC
+    LIMIT 12
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Lỗi lấy top students:', err);
+      return res.status(500).json({ success: false });
+    }
+
+    // DỰ PHÒNG AVATAR (nếu chưa có cột)
+    const students = results.map(student => ({
+      ...student,
+      avatar: student.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(student.fullName) + '&background=6366f1&color=fff&size=128'
+    }));
+
+    res.json({ success: true, data: students });
+  });
+};

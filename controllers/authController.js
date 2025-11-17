@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const db = require('../config/db'); // ← ĐÃ IMPORT
+const db = require('../config/db').callback; // ← ĐÃ IMPORT
 require('dotenv').config();
 
 // === ĐĂNG KÝ ===
